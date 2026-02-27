@@ -124,11 +124,23 @@ Se a categoria não existir, o bot apenas registrará um aviso no console e cont
 - **Limpeza preventiva:** A cada 1 hora, o bot remove salas vazias com mais de 24h de existência
 - **Logs informativos:** Todas as ações são registradas no console
 
+## ☁️ Deploy no Render.com
+
+1. Crie um **Background Worker** (não Web Service) no [Render](https://render.com)
+2. Conecte seu repositório
+3. O arquivo `render.yaml` já define:
+   - **Start Command:** `python main.py`
+   - **Build Command:** `pip install -r requirements.txt`
+4. Em **Environment**, adicione a variável `DISCORD_TOKEN` com o token do bot
+
+Ou configure manualmente: em **Start Command**, defina `python main.py`.
+
 ## 📂 Estrutura do projeto
 
 ```
 discord-dynamic-voice-bot/
 ├── main.py
+├── render.yaml
 ├── src/
 │   ├── __init__.py
 │   ├── bot.py
