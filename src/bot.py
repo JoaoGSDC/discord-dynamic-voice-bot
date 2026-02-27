@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import time
 import discord
 from discord.ext import commands
 
@@ -54,17 +56,80 @@ async def on_voice_state_update(member, before, after):
         await delete_if_empty(before.channel)
 
 
+@bot.event
+async def on_disconnect():
+    logger.warning("Bot desconectado")
+
+@bot.event
+async def on_error(event, *args, **kwargs):
+    logger.error(f"Erro no evento {event}: {args} {kwargs}")
+
 def main():
     if not DISCORD_TOKEN:
         logger.error("DISCORD_TOKEN não configurado! Configure no arquivo .env")
         return
 
-    try:
-        bot.run(DISCORD_TOKEN)
-    except discord.LoginFailure:
-        logger.error("Token inválido. Verifique o DISCORD_TOKEN no .env")
-    except Exception as e:
-        logger.error(f"Erro ao iniciar o bot: {e}")
+    max_retries = 5
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            bot.run(DISCORD_TOKEN, reconnect=True)
+            break
+        except discord.LoginFailure:
+            logger.error("Token inválido. Verifique o DISCORD_TOKEN no .env")
+            break
+        except discord.HTTPException as e:
+            if e.status == 429:
+                retry_after = getattr(e, 'retry_after', 60)
+                logger.warning(f"Rate limit atingido (429). Aguardando {retry_after} segundos...")
+                retry_count += 1
+                if retry_count < max_retries:
+                    time.sleep(retry_after)
+                    continue
+                else:
+                    logger.error("Muitas tentativas de reconexão após rate limit. Encerrando.")
+                    break
+            else:
+                logger.error(f"Erro HTTP {e.status}: {e}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    wait_time = min(2 ** retry_count, 60)
+                    logger.info(f"Aguardando {wait_time} segundos antes de tentar novamente...")
+                    time.sleep(wait_time)
+                else:
+                    break
+        except discord.RateLimited as e:
+            retry_after = getattr(e, 'retry_after', 60)
+            logger.warning(f"Rate limit atingido. Aguardando {retry_after} segundos...")
+            retry_count += 1
+            if retry_count < max_retries:
+                time.sleep(retry_after)
+                continue
+            else:
+                logger.error("Muitas tentativas após rate limit. Encerrando.")
+                break
+        except Exception as e:
+            error_msg = str(e)
+            if "429" in error_msg or "rate limit" in error_msg.lower():
+                logger.warning("Rate limit detectado. Aguardando 60 segundos...")
+                retry_count += 1
+                if retry_count < max_retries:
+                    time.sleep(60)
+                    continue
+                else:
+                    logger.error("Muitas tentativas após rate limit. Encerrando.")
+                    break
+            else:
+                logger.error(f"Erro ao iniciar o bot: {e}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    wait_time = min(2 ** retry_count, 60)
+                    logger.info(f"Aguardando {wait_time} segundos antes de tentar novamente...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error("Muitas tentativas. Encerrando.")
+                    break
 
 
 if __name__ == "__main__":
