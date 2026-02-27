@@ -126,14 +126,16 @@ Se a categoria não existir, o bot apenas registrará um aviso no console e cont
 
 ## ☁️ Deploy no Render.com
 
-1. Crie um **Background Worker** (não Web Service) no [Render](https://render.com)
+**Importante:** Use **Background Worker**, NÃO Web Service. O bot não abre portas HTTP.
+
+1. No [Render](https://render.com), clique em **New +** → **Background Worker**
 2. Conecte seu repositório
-3. O arquivo `render.yaml` já define:
+3. O `render.yaml` já define:
    - **Start Command:** `python main.py`
    - **Build Command:** `pip install -r requirements.txt`
-4. Em **Environment**, adicione a variável `DISCORD_TOKEN` com o token do bot
+4. Em **Environment**, adicione `DISCORD_TOKEN` com o token do bot
 
-Ou configure manualmente: em **Start Command**, defina `python main.py`.
+Se aparecer "No open ports detected", você criou um Web Service por engano. Delete e crie um **Background Worker**.
 
 ## 📂 Estrutura do projeto
 
@@ -154,8 +156,16 @@ discord-dynamic-voice-bot/
 
 ## ⚠️ Solução de problemas
 
+**"No open ports detected" no Render:**
+- Você criou um Web Service. O bot precisa ser um **Background Worker**
+- Delete o serviço e crie novo: **New +** → **Background Worker**
+
+**"429 Too Many Requests" ou "Session is closed":**
+- Rate limit do Discord. Aguarde 5–10 minutos e faça um novo deploy
+- O bot sai e o Render reinicia automaticamente com processo limpo
+
 **Bot não conecta:**
-- Verifique se o token está correto no `.env`
+- Verifique se o token está correto no `.env` ou nas variáveis do Render
 - Confirme que o bot foi adicionado ao servidor com as permissões necessárias
 
 **Canal não é criado:**
